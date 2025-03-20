@@ -46,7 +46,7 @@ finish the exercise.
 -/
 
 example (a b : ℝ) : (a+b)*(a-b) = a^2 - b^2 := by {
-  sorry
+  ring
 }
 
 /-
@@ -67,7 +67,8 @@ Try it on the next example.
 -/
 
 example (a b : ℝ) (f : ℝ → ℝ) : f ((a+b)^2 - 2*a*b) = f (a^2 + b^2) := by {
-  sorry
+  congr
+  ring
 }
 
 /-
@@ -107,7 +108,7 @@ displayed after each `by` after the `calc` line.
 
 example (a b c d : ℝ) (h : c = b*a - d) (h' : d = a*b) : c = 0 := by {
   calc
-    c = b*a - d   := by congr
+    c = b*a - d   := by assumption
     _ = b*a - a*b := by congr
     _ = 0         := by ring
 }
@@ -138,7 +139,11 @@ This is different from regular selection of text in your editor or browser.
 -/
 
 example (a b c : ℝ) (h : a = -b) (h' : b + c = 0) : b*(a - c) = 0 := by {
-  sorry
+  calc
+    b * (a - c) = b * (-b - c) := by congr
+    _ = b * (-(b + c)) := by ring
+    _ = b * (-0) := by congr
+    _ = 0 := by ring
 }
 
 /-
@@ -153,7 +158,9 @@ example (a b : ℝ) (h : a ≤ 2*b) : a + b ≤ 3*b := by {
 }
 
 example (a b : ℝ) (h : b ≤ a) : a + b ≤ 2*a := by {
-  sorry
+  calc
+    a + b ≤ a + a := by gcongr
+    _ = 2*a := by ring
 }
 
 /-
@@ -217,7 +224,7 @@ In the following exercise, you get to choose whether you want help from Lean
 or do all the work.
 -/
 example (f : ℝ → ℝ) (hf : even_fun f) : f (-5) = f 5 := by {
-  sorry
+  apply hf
 }
 
 /-
@@ -258,7 +265,7 @@ example (f g : ℝ → ℝ) (hf : even_fun f) (hg : even_fun g) : even_fun (f + 
   intro x₀
   -- and let's compute
   calc
-    (f + g) (-x₀) = f (-x₀) + g (-x₀)  := by simp
+    (f + g) (-x₀) = f (-x₀) + g (-x₀)  := by rfl
     _             = f x₀ + g (-x₀)     := by congr 1; apply hf
   -- put you cursor between `;` and `apply` in the previous line to see the intermediate goal
     _             = f x₀ + g x₀        := by congr 1; apply hg
@@ -280,7 +287,7 @@ Hence we can compress the above proof to:
 example (f g : ℝ → ℝ)  (hf : even_fun f) (hg : even_fun g) : even_fun (f + g) := by {
   intro x₀
   calc
-    (f + g) (-x₀) = f (-x₀) + g (-x₀)  := by simp
+    (f + g) (-x₀) = f (-x₀) + g (-x₀)  := by rfl
     _             = f x₀ + g x₀        := by congr 1; apply hf; apply hg
 }
 
@@ -314,7 +321,11 @@ need to be the same notation as in the statement.
 -/
 
 example (f g : ℝ → ℝ) (hf : even_fun f) : even_fun (g ∘ f) := by {
-  sorry
+  unfold even_fun
+  unfold Function.comp
+  intro x
+  congr 1
+  apply hf
 }
 
 /-
@@ -385,7 +396,11 @@ into pieces. You can choose your way in the following variation.
 
 example (f g : ℝ → ℝ) (hf : non_decreasing f) (hg : non_increasing g) :
     non_increasing (g ∘ f) := by {
-  sorry
+  unfold non_increasing
+  intro x₁ x₂ hx
+  apply hg
+  apply hf
+  exact hx
 }
 
 /-
@@ -419,7 +434,8 @@ Use `simp` to prove the following. Note that `X : Set ℝ` means that `X` is a
 set containing (only) real numbers. -/
 
 example (x : ℝ) (X Y : Set ℝ) (hx : x ∈ X) : x ∈ (X ∩ Y) ∪ (X \ Y) := by {
-  sorry
+  simp only [Set.inter_union_diff]
+  exact hx
 }
 
 /-
@@ -430,7 +446,7 @@ Use `apply?` to find the lemma that every continuous function with compact suppo
 has a global minimum. -/
 
 example (f : ℝ → ℝ) (hf : Continuous f) (h2f : HasCompactSupport f) : ∃ x, ∀ y, f x ≤ f y := by {
-  sorry
+  exact Continuous.exists_forall_le_of_hasCompactSupport hf h2f
 }
 
 /- ## Existential quantifiers
@@ -472,7 +488,12 @@ example (a b c : ℤ) (h₁ : a ∣ b) (h₂ : b ∣ c) : a ∣ c := by {
 }
 
 example (a b c : ℤ) (h₁ : a ∣ b) (h₂ : a ∣ c) : a ∣ b + c := by {
-  sorry
+  rcases h₁ with ⟨k, hk⟩
+  obtain ⟨l, hl⟩ := h₂ --rcases
+  use k + l
+  calc
+    b + c = a * k + a * l := by congr
+    _ = a * (k + l) := by ring
 }
 
 /-
@@ -567,7 +588,25 @@ You will probably want to rewrite using `abs_le` in several assumptions as well 
 goal. You can use `rw [abs_le] at *` for this. -/
 example (hu : seq_limit u l) (hw : seq_limit w l) (h : ∀ n, u n ≤ v n) (h' : ∀ n, v n ≤ w n) :
     seq_limit v l := by {
-  sorry
+  unfold seq_limit at *
+  intro ε ε_pos
+  rcases hu ε ε_pos with ⟨Nv, hNv⟩
+  rcases hw ε ε_pos with ⟨Nw, hNw⟩
+  use max Nv Nw
+  intro n hn
+  rw [ge_max_iff] at hn
+  specialize hNv n hn.1
+  specialize hNw n hn.2
+  rw [abs_le] at *
+  specialize h n
+  specialize h' n
+  constructor
+  calc
+    -ε ≤ u n - l := by exact hNv.1
+    _ ≤ v n - l := by gcongr
+  calc
+    v n - l ≤ w n - l := by gcongr
+    _ ≤ ε := by exact hNw.2
 }
 
 
@@ -582,7 +621,17 @@ as the first step.
 -- exercises.
 lemma uniq_limit (hl : seq_limit u l) (hl' : seq_limit u l') : l = l' := by {
   apply eq_of_abs_sub_le_all
-  sorry
+  intro ε ε_pos
+  rcases hl (ε/2) (by exact half_pos ε_pos) with ⟨Nl, hNl⟩
+  rcases hl' (ε/2) (by exact half_pos ε_pos) with ⟨Nl', hNl'⟩
+  let N := max Nl Nl'
+  specialize hNl N (le_max_left Nl Nl')
+  specialize hNl' N (le_max_right Nl Nl')
+  calc
+    |l - l'| = |(u N - l') - (u N - l)| := by ring
+    _ ≤ |u N - l'| + |u N - l| := abs_sub (u N - l') (u N - l)
+    _ ≤ ε/2 + ε/2 := by gcongr
+    _ = ε := by ring
 }
 
 /-
@@ -625,7 +674,13 @@ Don’t forget to move the cursor around to see what each `apply?` is proving.
 /-- Extractions take arbitrarily large values for arbitrarily large
 inputs. -/
 lemma extraction_ge : extraction φ → ∀ N N', ∃ n ≥ N', φ n ≥ N := by {
-  sorry
+  intro hφ N N'
+  use max N N'
+  constructor
+  exact le_max_right N N'
+  calc
+    φ (max N N') ≥ max N N' := id_le_extraction' hφ (max N N')
+    _ ≥ N := le_max_left N N'
 }
 
 /-- A real number `a` is a cluster point of a sequence `u`
@@ -636,19 +691,41 @@ def cluster_point (u : ℕ → ℝ) (a : ℝ) := ∃ φ, extraction φ ∧ seq_l
 `u` arbitrarily close to `a` for arbitrarily large input. -/
 lemma near_cluster :
   cluster_point u a → ∀ ε > 0, ∀ N, ∃ n ≥ N, |u n - a| ≤ ε := by {
-  sorry
+  intro cp_u_a ε ε_pos N
+  unfold cluster_point seq_limit at cp_u_a
+  rcases cp_u_a with ⟨φ, hφ⟩
+  have hφr := hφ.2 ε ε_pos
+  rcases hφr with ⟨N', hφN'⟩
+  let n := φ (max N' N)
+  use n
+  constructor
+  calc
+    n ≥ max N' N:= id_le_extraction' hφ.1 (max N' N)
+    max N' N ≥ N := le_max_right N' N
+  exact hφN' (max N' N) (le_max_left N' N)
 }
 
 
 /-- If `u` tends to `l` then its subsequences tend to `l`. -/
 lemma subseq_tendsto_of_tendsto' (h : seq_limit u l) (hφ : extraction φ) :
   seq_limit (u ∘ φ) l := by {
-  sorry
+  unfold seq_limit at *
+  intro ε ε_pos
+  rcases h ε ε_pos with ⟨N, hN⟩
+  use N
+  intro n n_ge_N
+  apply hN
+  calc
+    φ n ≥ n := id_le_extraction' hφ n
+    _ ≥ N := n_ge_N --by assumption
 }
 
 /-- If `u` tends to `l` all its cluster points are equal to `l`. -/
 lemma cluster_limit (hl : seq_limit u l) (ha : cluster_point u a) : a = l := by {
-  sorry
+  unfold cluster_point at ha
+  rcases ha with ⟨φ, hφ, hφa⟩
+  have hφl := subseq_tendsto_of_tendsto' hl hφ
+  exact uniq_limit hφa hφl
 }
 
 /-- `u` is a Cauchy sequence if its values get arbitrarily close for large
@@ -657,7 +734,18 @@ def CauchySequence (u : ℕ → ℝ) :=
   ∀ ε > 0, ∃ N, ∀ p q, p ≥ N → q ≥ N → |u p - u q| ≤ ε
 
 example : (∃ l, seq_limit u l) → CauchySequence u := by {
-  sorry
+  intro ⟨l, hu⟩
+  intro ε ε_pos
+  let half_ε := ε/2
+  let half_ε_pos := half_pos ε_pos
+  rcases hu half_ε half_ε_pos with ⟨N, hN⟩
+  use N
+  intro p q hp hq
+  have h_up := hN p hp
+  have h_uq := hN q hq
+  calc
+    |u p - u q| = |(u p - l) - (u q - l)| := by ring
+    _ ≤ |(u p - l)| + |(u q - l)| := abs_sub (u p - l) (u q - l)
+    _ ≤ half_ε + half_ε := add_le_add (hN p hp) (hN q hq) --by gcongr
+    _ = ε := add_halves ε --by ring
 }
-
-
